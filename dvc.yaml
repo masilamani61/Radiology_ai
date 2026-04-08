@@ -1,0 +1,84 @@
+# dvc.yaml — RadiologyAI DVC Pipeline DAG (PyTorch)
+# Run full pipeline : dvc repro
+# Show DAG          : dvc dag
+# Check status      : dvc status
+
+stages:
+
+  download:
+    cmd: python ml/src/data/download.py
+    deps:
+      - ml/src/data/download.py
+    outs:
+      - data/raw/chest-xray-pneumonia/
+      - data/raw/covid19-radiography/
+
+  validate:
+    cmd: python ml/src/data/validate.py
+    deps:
+      - ml/src/data/validate.py
+      - data/raw/chest-xray-pneumonia/
+      - data/raw/covid19-radiography/
+    outs:
+      - data/processed/validation_report.json
+      - data/processed/baseline_stats.json
+
+  preprocess:
+    cmd: python ml/src/data/preprocess.py
+    deps:
+      - ml/src/data/preprocess.py
+      - data/raw/chest-xray-pneumonia/
+      - data/raw/covid19-radiography/
+      - data/processed/validation_report.json
+    outs:
+      - data/processed/train/
+      - data/processed/val/
+      - data/processed/test/
+      - data/processed/split_stats.json
+
+  train:
+    cmd: >
+      python ml/src/models/train.py
+        --batch_size 32
+        --epochs_phase1 5
+        --epochs_phase2 15
+        --lr_phase1 0.001
+        --lr_phase2 0.0001
+    deps:
+      - ml/src/models/train.py
+      - ml/src/models/model.py
+      - ml/src/data/dataloader.py
+      - data/processed/train/
+      - data/processed/val/
+    outs:
+      - ml/models/efficientnetb0_best.pth
+    metrics:
+      - ml/experiments/test_metrics.json:
+          cache: false
+
+  evaluate:
+    cmd: python ml/src/evaluation/evaluate.py
+    deps:
+      - ml/src/evaluation/evaluate.py
+      - ml/models/efficientnetb0_best.pth
+      - data/processed/test/
+    metrics:
+      - ml/experiments/eval_report.json:
+          cache: false
+
+  explain:
+    cmd: python ml/src/explainability/gradcam.py
+    deps:
+      - ml/src/explainability/gradcam.py
+      - ml/models/efficientnetb0_best.pth
+      - data/processed/test/
+    outs:
+      - ml/experiments/gradcam_samples/
+
+  export:
+    cmd: python ml/src/models/export.py
+    deps:
+      - ml/src/models/export.py
+      - ml/models/efficientnetb0_best.pth
+    outs:
+      - ml/models/efficientnetb0_torchscript.pt

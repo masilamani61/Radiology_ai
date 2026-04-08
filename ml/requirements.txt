@@ -1,0 +1,27 @@
+# ── Deep Learning (PyTorch) ───────────────────────────
+torch==2.3.0
+torchvision==0.18.0
+torchaudio==2.3.0
+
+# ── Data & Utils ──────────────────────────────────────
+numpy==1.26.4
+pandas==2.2.2
+Pillow==10.3.0
+opencv-python==4.9.0.80
+matplotlib==3.9.0
+seaborn==0.13.2
+scikit-learn==1.4.2
+tqdm==4.66.4
+albumentations==1.4.7        # image augmentation
+
+# ── MLOps ─────────────────────────────────────────────
+mlflow==2.13.0
+dvc==3.51.1
+great-expectations==0.18.15
+evidently==0.4.30
+
+# ── Explainability ────────────────────────────────────
+grad-cam==1.5.0              # pytorch-grad-cam
+
+# ── Kaggle ────────────────────────────────────────────
+kaggle==1.6.14

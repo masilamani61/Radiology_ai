@@ -1,0 +1,25 @@
+name: radiologyai
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pytorch=2.3.0
+  - torchvision=0.18.0
+  - pytorch-cuda=12.1
+  - pip
+  - pip:
+    - mlflow==2.13.0
+    - scikit-learn==1.4.2
+    - albumentations==1.4.7
+    - grad-cam==1.5.0
+    - opencv-python==4.9.0.80
+    - Pillow==10.3.0
+    - pandas==2.2.2
+    - numpy==1.26.4
+    - matplotlib==3.9.0
+    - tqdm==4.66.4
+    - dvc==3.51.1
+    - evidently==0.4.30
+    - great-expectations==0.18.15
