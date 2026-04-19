@@ -1,0 +1,69 @@
+version: "3.9"
+
+services:
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: radiologyai_frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: radiologyai_backend
+    ports:
+      - "8005:8005"
+    volumes:
+      - ./ml/models:/app/ml/models
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+    restart: unless-stopped
+
+  mlflow:
+    image: python:3.10-slim
+    container_name: radiologyai_mlflow
+    command: >
+      bash -c "pip install mlflow && mlflow server
+      --host 0.0.0.0 --port 5001
+      --backend-store-uri sqlite:///mlflow.db
+      --default-artifact-root /mlflow/artifacts"
+    ports:
+      - "5001:5001"
+    volumes:
+      - mlflow_data:/mlflow
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: radiologyai_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./mlops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: radiologyai_grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=radiologyai123
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  mlflow_data:
+  grafana_data:

@@ -267,7 +267,7 @@ def train(args: argparse.Namespace) -> None:
     class_weights = compute_class_weights(PROC_DIR, device)
 
     # ── MLflow setup ──────────────────────────────────────────
-    mlflow.set_tracking_uri(args.mlflow_uri)
+    mlflow.set_tracking_uri("sqlite:///mlflow.db")
     mlflow.set_experiment("radiologyai_xray_classification")
 
     with mlflow.start_run(run_name=f"efficientnetb0_{commit}") as run:

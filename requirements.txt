@@ -1,7 +1,7 @@
 # ── Deep Learning (PyTorch) ───────────────────────────
 torch==2.3.0
 torchvision==0.18.0
-torchaudio==2.3.0
+
 
 # ── Data & Utils ──────────────────────────────────────
 numpy==1.26.4

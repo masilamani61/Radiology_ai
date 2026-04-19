@@ -1,0 +1,50 @@
+global:
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'vgmasilamani61@gmail.com'
+  smtp_auth_username: 'vgmasilamani61@gmail.com'
+  smtp_auth_password: 'tvvsrcmfednjxkyg'
+  smtp_require_tls: true
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname', 'severity']
+  group_wait: 10s
+  group_interval: 5m
+  repeat_interval: 1h
+  receiver: 'gmail-alerts'
+  routes:
+    - match:
+        severity: critical
+      receiver: 'gmail-alerts'
+      repeat_interval: 30m
+    - match:
+        severity: warning
+      receiver: 'gmail-alerts'
+      repeat_interval: 2h
+
+receivers:
+  - name: 'gmail-alerts'
+    email_configs:
+      - to: 'vgmasilamani61@gmail.com'
+        headers:
+          Subject: '[RadiologyAI] {{ .Status | toUpper }} - {{ .CommonLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Severity: {{ .Labels.severity }}
+          Description: {{ .Annotations.description }}
+          Time: {{ .StartsAt }}
+          {{ end }}
+        html: |
+          <h2 style="color:{{ if eq .Status "firing" }}red{{ else }}green{{ end }}">
+            RadiologyAI Alert - {{ .Status | toUpper }}
+          </h2>
+          {{ range .Alerts }}
+          <table border="1" cellpadding="8">
+            <tr><td><b>Alert</b></td><td>{{ .Annotations.summary }}</td></tr>
+            <tr><td><b>Severity</b></td><td>{{ .Labels.severity }}</td></tr>
+            <tr><td><b>Description</b></td><td>{{ .Annotations.description }}</td></tr>
+            <tr><td><b>Started</b></td><td>{{ .StartsAt }}</td></tr>
+          </table>
+          {{ end }}
+        send_resolved: true

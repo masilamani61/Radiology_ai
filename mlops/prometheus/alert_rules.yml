@@ -1,0 +1,78 @@
+groups:
+  - name: radiologyai_infrastructure
+    rules:
+      - alert: BackendDown
+        expr: up{job="radiologyai_backend"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "RadiologyAI backend is DOWN"
+          description: "Backend unreachable for 30s — check uvicorn process"
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API error rate exceeded 5%"
+          description: "Error rate is above the 5% SLA threshold"
+
+  - name: radiologyai_performance
+    rules:
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 0.2
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 latency > 200ms SLA breached"
+          description: "Clinical SLA requires inference under 200ms"
+
+      - alert: HighLatencyP99
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "P99 latency > 500ms — severe degradation"
+          description: "99th percentile latency is critically high"
+
+  - name: radiologyai_model_quality
+    rules:
+      - alert: LowModelAccuracy
+        expr: radiologyai_model_accuracy < 0.80
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Model accuracy dropped below 80% — retraining needed"
+          description: "Radiologist feedback shows model accuracy below threshold"
+
+      - alert: ModerateModelAccuracy
+        expr: radiologyai_model_accuracy < 0.90 and radiologyai_model_accuracy >= 0.80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Model accuracy below 90% — monitor closely"
+          description: "Radiologist feedback shows degrading model performance"
+
+      - alert: HighIncorrectPredictions
+        expr: rate(radiologyai_feedback_total{result="incorrect"}[10m]) > 0.3
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High rate of incorrect predictions reported by radiologists"
+          description: "More than 30% of recent predictions marked incorrect"
+
+      - alert: ModelRetrainingRequired
+        expr: radiologyai_model_accuracy < 0.80 and sum(radiologyai_feedback_total) > 10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "RETRAINING REQUIRED — accuracy below threshold with sufficient feedback"
+          description: "Auto-retraining will be triggered by Airflow DAG"

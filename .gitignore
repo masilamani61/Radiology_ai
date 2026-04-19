@@ -1,0 +1,76 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Large data files — tracked by DVC
+data/raw/
+data/processed/
+data/feedback.json
+
+# Trained models — tracked by DVC
+ml/models/*.pth
+ml/models/*.pt
+ml/models/saved_model/
+ml/experiments/gradcam_samples/
+
+# MLflow
+mlruns/
+mlflow.db
+
+# Logs
+logs/
+*.log
+
+# Prometheus & Grafana data
+prometheus/data/
+alertmanager_bin/data/
+prometheus_bin/data/
+grafana/data/
+
+# Airflow
+mlops/airflow/logs/
+mlops/airflow/airflow.db
+mlops/airflow/airflow.cfg
+mlops/airflow/standalone_admin_password.txt
+mlops/airflow/webserver_config.py
+
+# Node
+frontend/node_modules/
+frontend/build/
+
+# Environment files
+.env
+*.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test reports
+tests/test_report.html
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Temp
+tmp/
+temp/
+*.tmp
+
+# Downloaded binaries
+prometheus_bin/
+grafana_bin/
+alertmanager_bin/
+prometheus/
+grafana/
+
+# DVC cache
+.dvc/cache/
+.dvc/tmp/

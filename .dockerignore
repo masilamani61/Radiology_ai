@@ -1,0 +1,15 @@
+venv
+.venv
+data
+ml/models
+*.pt
+*.pth
+__pycache__
+*.pyc
+mlruns
+mlflow.db
+node_modules
+.git
+logs
+*.log
+tmp
