@@ -22,9 +22,15 @@ import torch.nn as nn
 from torchvision import models
 from torchvision.models import EfficientNet_B0_Weights
 
+from shared.config import get_config_value
+
 logger = logging.getLogger(__name__)
 
-CLASS_NAMES = ["Normal", "Pneumonia", "COVID19"]
+CLASS_NAMES = get_config_value(
+    "ml",
+    "class_names",
+    default=["Normal", "Pneumonia", "COVID19"],
+)
 NUM_CLASSES = len(CLASS_NAMES)
 
 

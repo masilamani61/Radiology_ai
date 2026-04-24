@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import toast from 'react-hot-toast';
+import axios from "axios";
 import { submitFeedback } from '../services/api';
 
 const COLORS = { Normal: '#639922', Pneumonia: '#E24B4A', COVID19: '#BA7517' };
@@ -16,6 +17,25 @@ export default function ResultPage({ result, image, onReset }) {
   const chartData = result.all_probabilities.map(p => ({
     name: p.class_name, value: Math.round(p.confidence * 100)
   }));
+  const handleDownloadPDF = async () => {
+  try {
+    const res = await axios.post(
+      `${process.env.REACT_APP_API_URL || 'http://localhost:8005'}/api/v1/report/pdf`,
+      { ...result, patient_id: 'PT-001', age: '' },
+      { responseType: 'blob' }
+    );
+    const url  = window.URL.createObjectURL(new Blob([res.data]));
+    const link = document.createElement('a');
+    link.href  = url;
+    link.setAttribute('download', 'RadiologyAI_Report.pdf');
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    toast.success('PDF downloaded!');
+  } catch(e) {
+    toast.error('PDF generation failed');
+  }
+};
 
   const handleFeedback = async (confirmed) => {
     try {
@@ -103,6 +123,14 @@ export default function ResultPage({ result, image, onReset }) {
           </div>
         )}
       </div>
+      <div style={{ display:'flex', gap:8 }}>
+  <button onClick={handleDownloadPDF} style={{ flex:1, padding:10, background:'#0c2340', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontSize:13 }}>
+    📄 Download PDF Report
+  </button>
+  <button onClick={onReset} style={{ flex:1, padding:10, background:'#f0f4f8', color:'#5a7a94', border:'none', borderRadius:8, cursor:'pointer', fontSize:13 }}>
+    New Scan
+  </button>
+</div>
 
       <p style={{ fontSize: 11, color: '#94b4cc', textAlign: 'center', marginTop: 12 }}>
         {result.disclaimer}
@@ -110,3 +138,18 @@ export default function ResultPage({ result, image, onReset }) {
     </div>
   );
 }
+// Add this function inside the ResultPage component (before return):
+// const handleDownloadPDF = async () => {
+//   try {
+//     const res = await axios.post('http://localhost:8005/api/v1/report/pdf',
+//       { ...result, patient_id: 'PT-001', age: '' },
+//       { responseType: 'blob' }
+//     );
+//     const url  = window.URL.createObjectURL(new Blob([res.data]));
+//     const link = document.createElement('a');
+//     link.href  = url;
+//     link.setAttribute('download', 'RadiologyAI_Report.pdf');
+//     document.body.appendChild(link);
+//     link.click();
+//   } catch(e) { toast.error('PDF generation failed'); }
+// };

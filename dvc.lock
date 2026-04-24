@@ -1,0 +1,87 @@
+schema: '2.0'
+stages:
+  download:
+    cmd: python ml/src/data/download.py
+    deps:
+    - path: ml/src/data/download.py
+      hash: md5
+      md5: 10d81d7bb27c874e467b7155b544d881
+      size: 5832
+    outs:
+    - path: data/raw/COVID-19_Radiography_Dataset/
+      hash: md5
+      md5: 5d56b558ac4153de232e2e7d4d846d59.dir
+      size: 806838951
+      nfiles: 42335
+    - path: data/raw/chest_xray/
+      hash: md5
+      md5: 12f5544d55adad6e1be9afec2495a0bd.dir
+      size: 2483915296
+      nfiles: 17591
+  validate:
+    cmd: python ml/src/data/validate.py
+    deps:
+    - path: data/raw/COVID-19_Radiography_Dataset/
+      hash: md5
+      md5: 5d56b558ac4153de232e2e7d4d846d59.dir
+      size: 806838951
+      nfiles: 42335
+    - path: data/raw/chest_xray/
+      hash: md5
+      md5: 12f5544d55adad6e1be9afec2495a0bd.dir
+      size: 2483915296
+      nfiles: 17591
+    - path: ml/src/data/validate.py
+      hash: md5
+      md5: 4bf9967c5ba1979fdc404efd79cc55c4
+      size: 1974
+    outs:
+    - path: data/processed/baseline_stats.json
+      hash: md5
+      md5: dbbfbba22f10c9d2ceb36aa516e695f4
+      size: 294
+    - path: data/processed/validation_report.json
+      hash: md5
+      md5: 28864c5fbb85c1b19502bef60fc218b3
+      size: 228
+  preprocess:
+    cmd: python ml/src/data/preprocess.py
+    deps:
+    - path: data/processed/validation_report.json
+      hash: md5
+      md5: 28864c5fbb85c1b19502bef60fc218b3
+      size: 228
+    - path: data/raw/COVID-19_Radiography_Dataset/
+      hash: md5
+      md5: 5d56b558ac4153de232e2e7d4d846d59.dir
+      size: 806838951
+      nfiles: 42335
+    - path: data/raw/chest_xray/
+      hash: md5
+      md5: 12f5544d55adad6e1be9afec2495a0bd.dir
+      size: 2483915296
+      nfiles: 17591
+    - path: ml/src/data/preprocess.py
+      hash: md5
+      md5: f563528062193bbc71873d1300933266
+      size: 2684
+    outs:
+    - path: data/processed/split_stats.json
+      hash: md5
+      md5: 0ad60579a0bc70b03dac63120e63198e
+      size: 215
+    - path: data/processed/test/
+      hash: md5
+      md5: 51433cb29c2472b411e3a0176f5ff0bc.dir
+      size: 13856795
+      nfiles: 1327
+    - path: data/processed/train/
+      hash: md5
+      md5: 6514ee15cb49eb6891ae74a0ff8a257e.dir
+      size: 64723842
+      nfiles: 6183
+    - path: data/processed/val/
+      hash: md5
+      md5: 803b67816b4d3b5efb46869b7857e1d5.dir
+      size: 13842333
+      nfiles: 1322

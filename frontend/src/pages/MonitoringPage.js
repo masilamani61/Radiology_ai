@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { FRONTEND_CONFIG } from '../config';
 import { checkHealth } from '../services/api';
 
 export default function MonitoringPage() {
@@ -14,10 +15,10 @@ export default function MonitoringPage() {
   const metrics = [
     { label: 'API Status',    value: health?.status === 'ok' ? 'Online' : 'Error',   color: health?.status === 'ok' ? '#27500A' : '#791F1F', bg: health?.status === 'ok' ? '#EAF3DE' : '#FCEBEB' },
     { label: 'Model Loaded',  value: health?.model_loaded ? 'Yes' : 'No',            color: health?.model_loaded ? '#27500A' : '#791F1F',    bg: health?.model_loaded ? '#EAF3DE' : '#FCEBEB'    },
-    { label: 'Model',         value: 'EfficientNetB0', color: '#0C447C', bg: '#E6F1FB' },
-    { label: 'Framework',     value: 'PyTorch 2.3',    color: '#0C447C', bg: '#E6F1FB' },
-    { label: 'Classes',       value: '3',              color: '#633806', bg: '#FAEEDA' },
-    { label: 'Image Size',    value: '224×224',        color: '#633806', bg: '#FAEEDA' },
+    { label: 'Model',         value: health?.model_name || 'Unknown', color: '#0C447C', bg: '#E6F1FB' },
+    { label: 'Framework',     value: health?.framework || 'Unknown',  color: '#0C447C', bg: '#E6F1FB' },
+    { label: 'Classes',       value: health?.class_count ?? '-',      color: '#633806', bg: '#FAEEDA' },
+    { label: 'Image Size',    value: health?.image_size ? `${health.image_size}x${health.image_size}` : '-', color: '#633806', bg: '#FAEEDA' },
   ];
 
   return (
@@ -36,15 +37,15 @@ export default function MonitoringPage() {
       <div style={card}>
         <p style={label}>Grafana Dashboard</p>
         <div style={{ background: '#f0f4f8', borderRadius: 8, padding: '2rem', textAlign: 'center', color: '#5a7a94', fontSize: 13 }}>
-          Start Grafana on port 3001 to see live metrics here.<br/>
-          <code style={{ fontSize: 12, background: '#e0e8f0', padding: '2px 6px', borderRadius: 4 }}>docker compose up grafana</code>
+         View Grafana Dashboard at <a href={FRONTEND_CONFIG.grafanaUrl || '#'} target="_blank" rel="noreferrer" style={{ color: '#378ADD' }}>{FRONTEND_CONFIG.grafanaUrl || 'Not configured'}</a>
+
         </div>
       </div>
 
       <div style={card}>
         <p style={label}>MLflow Experiments</p>
         <div style={{ background: '#f0f4f8', borderRadius: 8, padding: '2rem', textAlign: 'center', color: '#5a7a94', fontSize: 13 }}>
-          View training runs at <a href="http://localhost:5001" target="_blank" rel="noreferrer" style={{ color: '#378ADD' }}>http://localhost:5001</a>
+          View training runs at <a href={FRONTEND_CONFIG.mlflowUrl || '#'} target="_blank" rel="noreferrer" style={{ color: '#378ADD' }}>{FRONTEND_CONFIG.mlflowUrl || 'Not configured'}</a>
         </div>
       </div>
 

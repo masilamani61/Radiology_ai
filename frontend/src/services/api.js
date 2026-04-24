@@ -1,9 +1,10 @@
 import axios from 'axios';
+import { FRONTEND_CONFIG } from '../config';
 
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8005';
+const BASE_URL = FRONTEND_CONFIG.apiUrl;
 
 const api = axios.create({
-  baseURL: `${BASE_URL}/api/v1`,
+  baseURL: `${BASE_URL}${FRONTEND_CONFIG.apiPrefix}`,
   timeout: 30000,
 });
 
@@ -26,6 +27,11 @@ export const predictXray = async (imageFile) => {
 
 export const submitFeedback = async (data) => {
   const res = await api.post('/feedback', data);
+  return res.data;
+};
+
+export const getClasses = async () => {
+  const res = await axios.get(`${BASE_URL}/classes`);
   return res.data;
 };
 

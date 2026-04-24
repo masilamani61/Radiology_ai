@@ -24,6 +24,7 @@ import time
 from pathlib import Path
 from typing import Dict, Tuple
 
+
 import matplotlib.pyplot as plt
 import mlflow
 import mlflow.pytorch
@@ -43,6 +44,7 @@ from ml.src.data.dataloader import (
     get_dataloaders,
 )
 from ml.src.models.model import get_model
+from shared.config import get_config_value, resolve_path
 
 logging.basicConfig(
     level  = logging.INFO,
@@ -52,11 +54,53 @@ logger = logging.getLogger(__name__)
 
 # ── Paths ─────────────────────────────────────────────────────
 ROOT        = Path(__file__).resolve().parents[3]
-PROC_DIR    = ROOT / "data" / "processed"
-MODELS_DIR  = ROOT / "ml" / "models"
-EXP_DIR     = ROOT / "ml" / "experiments"
+PROC_DIR    = resolve_path(get_config_value("paths", "processed_data_dir", default="data/processed"))
+MODELS_DIR  = resolve_path(get_config_value("paths", "models_dir", default="ml/models"))
+EXP_DIR     = resolve_path(get_config_value("paths", "experiments_dir", default="ml/experiments"))
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 EXP_DIR.mkdir(parents=True, exist_ok=True)
+MLFLOW_TRACKING_URI = get_config_value(
+    "ops",
+    "mlflow",
+    "tracking_uri",
+    default="sqlite:///mlflow.db",
+)
+MLFLOW_EXPERIMENT_NAME = get_config_value(
+    "ops",
+    "mlflow",
+    "experiment_name",
+    default="radiologyai_xray_classification",
+)
+MODEL_ARCHITECTURE = get_config_value(
+    "ml",
+    "model",
+    "architecture",
+    default="EfficientNetB0",
+)
+MODEL_REGISTRY_NAME = get_config_value(
+    "ml",
+    "model",
+    "registered_model_name",
+    default="radiologyai_xray_classifier",
+)
+GRAD_CLIP_NORM = get_config_value("ml", "train", "grad_clip_norm", default=1.0)
+WEIGHT_DECAY = get_config_value("ml", "train", "weight_decay", default=1e-4)
+DATASET_NAME = get_config_value(
+    "ml",
+    "train",
+    "dataset_name",
+    default="chest-xray + covid19-radiography",
+)
+TRAIN_AUGMENTATION = get_config_value(
+    "ml",
+    "train",
+    "augmentation",
+    default="flip+brightness+rotation+noise",
+)
+IMAGE_SIZE = get_config_value("ml", "image_size", default=224)
+MODEL_PATH = resolve_path(
+    get_config_value("paths", "model_path", default="ml/models/efficientnetb0_best.pth")
+)
 
 
 def get_git_commit_hash() -> str:
@@ -127,7 +171,7 @@ def train_one_epoch(
         loss.backward()
 
         # gradient clipping — prevents exploding gradients
-        nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        nn.utils.clip_grad_norm_(model.parameters(), max_norm=GRAD_CLIP_NORM)
         optimizer.step()
 
         total_loss += loss.item() * images.size(0)
@@ -267,19 +311,19 @@ def train(args: argparse.Namespace) -> None:
     class_weights = compute_class_weights(PROC_DIR, device)
 
     # ── MLflow setup ──────────────────────────────────────────
-    mlflow.set_tracking_uri("sqlite:///mlflow.db")
-    mlflow.set_experiment("radiologyai_xray_classification")
+    mlflow.set_tracking_uri(args.mlflow_uri)
+    mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
 
-    with mlflow.start_run(run_name=f"efficientnetb0_{commit}") as run:
+    with mlflow.start_run(run_name=f"{MODEL_ARCHITECTURE.lower()}_{commit}") as run:
         run_id = run.info.run_id
         logger.info(f"MLflow run ID: {run_id}")
 
         # ── Log hyperparameters ───────────────────────────────
         mlflow.log_params({
-            "model"         : "EfficientNetB0",
+            "model"         : MODEL_ARCHITECTURE,
             "framework"     : "PyTorch",
-            "num_classes"   : 3,
-            "image_size"    : 224,
+            "num_classes"   : len(CLASS_NAMES),
+            "image_size"    : IMAGE_SIZE,
             "batch_size"    : args.batch_size,
             "epochs_phase1" : args.epochs_phase1,
             "epochs_phase2" : args.epochs_phase2,
@@ -288,9 +332,9 @@ def train(args: argparse.Namespace) -> None:
             "dropout"       : args.dropout,
             "optimizer"     : "AdamW",
             "scheduler"     : "CosineAnnealingLR",
-            "augmentation"  : "flip+brightness+rotation+noise",
+            "augmentation"  : TRAIN_AUGMENTATION,
             "class_weights" : "balanced",
-            "dataset"       : "chest-xray + covid19-radiography",
+            "dataset"       : DATASET_NAME,
             "git_commit"    : commit,           # reproducibility requirement
         })
 
@@ -306,7 +350,7 @@ def train(args: argparse.Namespace) -> None:
         criterion = nn.CrossEntropyLoss(weight=class_weights)
 
         best_val_f1  = 0.0
-        best_model_path = MODELS_DIR / "efficientnetb0_best.pth"
+        best_model_path = MODEL_PATH
 
         # ══════════════════════════════════════════════════════
         # PHASE 1 — Frozen backbone, train head only
@@ -314,7 +358,7 @@ def train(args: argparse.Namespace) -> None:
         logger.info("\nPHASE 1 — Training classifier head (backbone frozen)")
         optimizer1 = torch.optim.AdamW(
             filter(lambda p: p.requires_grad, model.parameters()),
-            lr=args.lr_phase1, weight_decay=1e-4
+            lr=args.lr_phase1, weight_decay=WEIGHT_DECAY
         )
         scheduler1 = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer1, T_max=args.epochs_phase1
@@ -369,7 +413,7 @@ def train(args: argparse.Namespace) -> None:
 
         optimizer2 = torch.optim.AdamW(
             model.parameters(),
-            lr=args.lr_phase2, weight_decay=1e-4
+            lr=args.lr_phase2, weight_decay=WEIGHT_DECAY
         )
         scheduler2 = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer2, T_max=args.epochs_phase2
@@ -454,7 +498,7 @@ def train(args: argparse.Namespace) -> None:
         mlflow.pytorch.log_model(
             model,
             artifact_path   = "model",
-            registered_model_name = "radiologyai_xray_classifier",
+            registered_model_name = MODEL_REGISTRY_NAME,
         )
 
         # save test metrics to file (DVC metrics)
@@ -479,14 +523,40 @@ def train(args: argparse.Namespace) -> None:
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments for training configuration."""
     parser = argparse.ArgumentParser(description="RadiologyAI Training")
-    parser.add_argument("--batch_size",    type=int,   default=32)
-    parser.add_argument("--epochs_phase1", type=int,   default=5)
-    parser.add_argument("--epochs_phase2", type=int,   default=15)
-    parser.add_argument("--lr_phase1",     type=float, default=1e-3)
-    parser.add_argument("--lr_phase2",     type=float, default=1e-4)
-    parser.add_argument("--dropout",       type=float, default=0.3)
     parser.add_argument(
-        "--mlflow_uri", type=str, default="http://localhost:5000"
+        "--batch_size",
+        type=int,
+        default=get_config_value("ml", "train", "batch_size", default=32),
+    )
+    parser.add_argument(
+        "--epochs_phase1",
+        type=int,
+        default=get_config_value("ml", "train", "epochs_phase1", default=5),
+    )
+    parser.add_argument(
+        "--epochs_phase2",
+        type=int,
+        default=get_config_value("ml", "train", "epochs_phase2", default=15),
+    )
+    parser.add_argument(
+        "--lr_phase1",
+        type=float,
+        default=get_config_value("ml", "train", "lr_phase1", default=1e-3),
+    )
+    parser.add_argument(
+        "--lr_phase2",
+        type=float,
+        default=get_config_value("ml", "train", "lr_phase2", default=1e-4),
+    )
+    parser.add_argument(
+        "--dropout",
+        type=float,
+        default=get_config_value("ml", "train", "dropout", default=0.3),
+    )
+    parser.add_argument(
+        "--mlflow_uri",
+        type=str,
+        default=MLFLOW_TRACKING_URI,
     )
     return parser.parse_args()
 

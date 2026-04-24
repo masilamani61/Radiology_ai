@@ -6,23 +6,7 @@ conda_env: conda.yaml
 entry_points:
 
   train:
-    parameters:
-      batch_size    : {type: int,   default: 32}
-      epochs_phase1 : {type: int,   default: 5}
-      epochs_phase2 : {type: int,   default: 15}
-      lr_phase1     : {type: float, default: 0.001}
-      lr_phase2     : {type: float, default: 0.0001}
-      dropout       : {type: float, default: 0.3}
-    command: >
-      python ml/src/models/train.py
-        --batch_size {batch_size}
-        --epochs_phase1 {epochs_phase1}
-        --epochs_phase2 {epochs_phase2}
-        --lr_phase1 {lr_phase1}
-        --lr_phase2 {lr_phase2}
-        --dropout {dropout}
+    command: python ml/src/models/train.py
 
   evaluate:
-    parameters:
-      model_path: {type: str, default: "ml/models/efficientnetb0_best.pth"}
-    command: python ml/src/evaluation/evaluate.py --model_path {model_path}
+    command: python ml/src/evaluation/evaluate.py

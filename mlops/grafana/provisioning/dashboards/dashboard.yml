@@ -4,4 +4,4 @@ providers:
     folder: RadiologyAI
     type: file
     options:
-      path: /data/data/DA25S005/Radiology_ai/mlops/grafana/dashboards
+      path: /var/lib/grafana/dashboards

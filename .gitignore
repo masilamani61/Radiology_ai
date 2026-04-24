@@ -74,3 +74,33 @@ grafana/
 # DVC cache
 .dvc/cache/
 .dvc/tmp/
+
+# OS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Node
+node_modules/
+
+# MLflow
+mlruns/
+mlflow.db
+
+# Data / artifacts
+data/
+ml/experiments/
+*.png
+*.json
+
+# DVC cache
+.dvc/cache/
+
+# Env
+.env
+
+# Logs
+logs/

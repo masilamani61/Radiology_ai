@@ -1,14 +1,17 @@
-version: "3.9"
-
 services:
 
   frontend:
     build:
       context: .
       dockerfile: docker/Dockerfile.frontend
+      args:
+        REACT_APP_API_URL: ${FRONTEND_API_URL}
+        REACT_APP_API_PREFIX: ${BACKEND_API_PREFIX:-/api/v1}
+        REACT_APP_GRAFANA_URL: http://localhost:${GRAFANA_PORT:-3001}
+        REACT_APP_MLFLOW_URL: http://localhost:${MLFLOW_PORT:-5005}
     container_name: radiologyai_frontend
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
       - backend
     restart: unless-stopped
@@ -19,51 +22,118 @@ services:
       dockerfile: docker/Dockerfile.backend
     container_name: radiologyai_backend
     ports:
-      - "8005:8005"
+      - "${BACKEND_PORT:-8005}:${BACKEND_PORT:-8005}"
     volumes:
       - ./ml/models:/app/ml/models
       - ./data:/app/data
       - ./logs:/app/logs
     environment:
       - PYTHONPATH=/app
+      - PORT=${BACKEND_PORT:-8005}
     restart: unless-stopped
 
   mlflow:
     image: python:3.10-slim
     container_name: radiologyai_mlflow
     command: >
-      bash -c "pip install mlflow && mlflow server
-      --host 0.0.0.0 --port 5001
-      --backend-store-uri sqlite:///mlflow.db
-      --default-artifact-root /mlflow/artifacts"
+      bash -c "pip install mlflow==3.1.4 &&
+      mlflow server
+      --host ${MLFLOW_HOST:-0.0.0.0}
+      --port ${MLFLOW_PORT:-5005}
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --default-artifact-root /mlflow/mlruns
+      --serve-artifacts"
     ports:
-      - "5001:5001"
+      - "${MLFLOW_PORT:-5005}:${MLFLOW_PORT:-5005}"
     volumes:
-      - mlflow_data:/mlflow
+      - mlflow_db:/mlflow
+      - ./mlruns:/mlflow/mlruns
     restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:latest
     container_name: radiologyai_prometheus
     ports:
-      - "9090:9090"
+      - "${PROMETHEUS_PORT:-9090}:9090"
     volumes:
       - ./mlops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./mlops/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml
     restart: unless-stopped
 
   grafana:
     image: grafana/grafana:latest
     container_name: radiologyai_grafana
     ports:
-      - "3001:3000"
+      - "${GRAFANA_PORT:-3001}:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=radiologyai123
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin123}
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_METRICS_ENABLED=true
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./mlops/grafana/provisioning:/etc/grafana/provisioning
+      - ./mlops/grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
       - prometheus
     restart: unless-stopped
 
+  nginx_exporter:
+    image: nginx/nginx-prometheus-exporter:1.4.2
+    container_name: radiologyai_nginx_exporter
+    command:
+      - --nginx.scrape-uri=http://frontend:3000/stub_status
+    depends_on:
+      - frontend
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: radiologyai_alertmanager
+    ports:
+      - "${ALERTMANAGER_PORT:-9093}:9093"
+    volumes:
+      - ./mlops/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+    restart: unless-stopped
+
+  airflow:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.airflow
+    image: apache/airflow:2.9.1
+    container_name: radiologyai_airflow
+    command: standalone
+    ports:
+      - "${AIRFLOW_PORT:-8080}:8080"
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
+      - AIRFLOW__WEBSERVER__SECRET_KEY=radiologyai_secret
+      - RADIOLOGYAI_BASE=${AIRFLOW_BASE_DIR:-/opt/radiologyai}
+    volumes:
+      - ./mlops/airflow/dags:/opt/airflow/dags
+      - .:/opt/radiologyai
+      - airflow_data:/opt/airflow
+    restart: unless-stopped
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: radiologyai_node_exporter
+    ports:
+      - "${NODE_EXPORTER_PORT:-9100}:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+
 volumes:
-  mlflow_data:
   grafana_data:
+  airflow_data:
+  mlflow_db:

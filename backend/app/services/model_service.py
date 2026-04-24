@@ -9,14 +9,16 @@ import torch.nn.functional as F
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
+from backend.app.core.config import settings
+from backend.app.core.metrics import model_loaded_gauge
 from ml.src.models.model import get_model
 from ml.src.data.dataloader import get_val_transforms
 from ml.src.explainability.gradcam import explain_single
 
 logger = logging.getLogger(__name__)
 
-CLASS_NAMES = ["Normal", "Pneumonia", "COVID19"]
-RISK_MAP    = {"Normal": "Low", "Pneumonia": "High", "COVID19": "High"}
+CLASS_NAMES = settings.CLASS_NAMES
+RISK_MAP    = settings.RISK_MAP
 
 
 class ModelService:
@@ -34,10 +36,12 @@ class ModelService:
                 torch.load(self.model_path, map_location=self.device)
             )
             self.model.eval()
+            model_loaded_gauge.set(1)
             logger.info(f"Model loaded from {self.model_path} on {self.device}")
         except Exception as e:
             logger.error(f"Model load failed: {e}")
             self.model = None
+            model_loaded_gauge.set(0)
 
     def is_loaded(self) -> bool:
         return self.model is not None

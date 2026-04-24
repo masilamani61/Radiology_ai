@@ -22,12 +22,30 @@ from albumentations.pytorch import ToTensorV2
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 
+from shared.config import get_config_value
+
 logger = logging.getLogger(__name__)
 
 # ── Constants ─────────────────────────────────────────────────
-IMAGE_SIZE  = 224
-CLASS_NAMES = ["Normal", "Pneumonia", "COVID19"]
+IMAGE_SIZE  = get_config_value("ml", "image_size", default=224)
+CLASS_NAMES = get_config_value(
+    "ml",
+    "class_names",
+    default=["Normal", "Pneumonia", "COVID19"],
+)
 CLASS_TO_IDX = {c: i for i, c in enumerate(CLASS_NAMES)}
+NORM_MEAN = get_config_value(
+    "ml",
+    "normalization",
+    "mean",
+    default=[0.485, 0.456, 0.406],
+)
+NORM_STD = get_config_value(
+    "ml",
+    "normalization",
+    "std",
+    default=[0.229, 0.224, 0.225],
+)
 
 
 # ── Albumentations transforms ─────────────────────────────────
@@ -57,8 +75,8 @@ def get_train_transforms() -> A.Compose:
         ),
         A.GaussNoise(var_limit=(5.0, 20.0), p=0.3),
         A.Normalize(
-            mean=[0.485, 0.456, 0.406],    # ImageNet mean
-            std=[0.229, 0.224, 0.225],     # ImageNet std
+            mean=NORM_MEAN,
+            std=NORM_STD,
         ),
         ToTensorV2(),
     ])
@@ -75,8 +93,8 @@ def get_val_transforms() -> A.Compose:
     return A.Compose([
         A.Resize(IMAGE_SIZE, IMAGE_SIZE),
         A.Normalize(
-            mean=[0.485, 0.456, 0.406],
-            std=[0.229, 0.224, 0.225],
+            mean=NORM_MEAN,
+            std=NORM_STD,
         ),
         ToTensorV2(),
     ])
@@ -180,9 +198,9 @@ class XRayDataset(Dataset):
 # ── DataLoader factory ────────────────────────────────────────
 def get_dataloaders(
     processed_dir : Path,
-    batch_size    : int  = 32,
-    num_workers   : int  = 4,
-    pin_memory    : bool = True,
+    batch_size    : int  = get_config_value("ml", "train", "batch_size", default=32),
+    num_workers   : int  = get_config_value("ml", "train", "num_workers", default=4),
+    pin_memory    : bool = get_config_value("ml", "train", "pin_memory", default=True),
 ) -> Dict[str, DataLoader]:
     """
     Build train, val, and test DataLoaders.

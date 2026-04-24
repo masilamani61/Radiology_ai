@@ -30,6 +30,10 @@ class HealthResponse(BaseModel):
     status: str
     model_loaded: bool
     version: str = "1.0.0"
+    model_name: str
+    framework: str
+    image_size: int
+    class_count: int
 
 class ClassesResponse(BaseModel):
     classes: List[str]

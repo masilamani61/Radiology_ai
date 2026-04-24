@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from backend.app.core.config import settings
 from backend.app.main import app
 
 client = TestClient(app)
@@ -18,20 +19,19 @@ def test_ready():
     assert r.status_code == 200
 
 def test_classes():
-    r = client.get("/api/v1/classes")
+    r = client.get("/classes")
+    print(r.json())
     assert r.status_code == 200
-    assert "Normal" in r.json()["classes"]
-    assert "Pneumonia" in r.json()["classes"]
-    assert "COVID19" in r.json()["classes"]
+    assert r.json()["classes"] == settings.CLASS_NAMES
 
 def test_predict_no_file():
-    r = client.post("/api/v1/predict")
+    r = client.post(f"{settings.API_PREFIX}/predict")
     assert r.status_code == 422
 
 def test_feedback():
-    r = client.post("/api/v1/feedback", json={
+    r = client.post(f"{settings.API_PREFIX}/feedback", json={
         "prediction_id": "test_001",
-        "predicted_class": "Pneumonia",
+        "predicted_class": settings.CLASS_NAMES[1],
         "radiologist_confirmed": True,
         "comments": "Correct"
     })

@@ -39,6 +39,7 @@ from tqdm import tqdm
 
 from ml.src.data.dataloader import CLASS_NAMES, get_dataloaders
 from ml.src.models.model import get_model
+from shared.config import get_config_value, resolve_path
 
 logging.basicConfig(
     level=logging.INFO,
@@ -47,10 +48,27 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 ROOT       = Path(__file__).resolve().parents[3]
-PROC_DIR   = ROOT / "data" / "processed"
-MODELS_DIR = ROOT / "ml" / "models"
-EXP_DIR    = ROOT / "ml" / "experiments"
+PROC_DIR   = resolve_path(get_config_value("paths", "processed_data_dir", default="data/processed"))
+MODELS_DIR = resolve_path(get_config_value("paths", "models_dir", default="ml/models"))
+EXP_DIR    = resolve_path(get_config_value("paths", "experiments_dir", default="ml/experiments"))
 EXP_DIR.mkdir(parents=True, exist_ok=True)
+MLFLOW_EXPERIMENT_NAME = get_config_value(
+    "ops",
+    "mlflow",
+    "experiment_name",
+    default="radiologyai_xray_classification",
+)
+ROC_TITLE = f"ROC Curves - {get_config_value('app', 'name', default='RadiologyAI')} Chest X-Ray Classifier"
+ACCURACY_MIN = get_config_value("ml", "evaluation", "acceptance", "accuracy_min", default=0.92)
+MACRO_F1_MIN = get_config_value("ml", "evaluation", "acceptance", "macro_f1_min", default=0.92)
+MACRO_AUC_MIN = get_config_value("ml", "evaluation", "acceptance", "macro_auc_min", default=0.95)
+RECALL_MIN_PER_CLASS = get_config_value(
+    "ml",
+    "evaluation",
+    "acceptance",
+    "recall_min_per_class",
+    default=0.9,
+)
 
 
 @torch.no_grad()
@@ -145,7 +163,7 @@ def save_roc_curves(
     ax.plot([0, 1], [0, 1], "k--", lw=1, label="Random")
     ax.set_xlabel("False Positive Rate")
     ax.set_ylabel("True Positive Rate")
-    ax.set_title("ROC Curves — RadiologyAI Chest X-Ray Classifier")
+    ax.set_title(ROC_TITLE)
     ax.legend(loc="lower right")
     ax.grid(alpha=0.3)
     plt.tight_layout()
@@ -207,7 +225,10 @@ def evaluate(args: argparse.Namespace) -> dict:
     logger.info("Model loaded successfully.")
 
     # ── Load test data ────────────────────────────────────────
-    loaders = get_dataloaders(PROC_DIR, batch_size=32)
+    loaders = get_dataloaders(
+        PROC_DIR,
+        batch_size=get_config_value("ml", "evaluation", "batch_size", default=32),
+    )
 
     # ── Get predictions ───────────────────────────────────────
     labels, preds, probs = get_predictions(model, loaders["test"], device)
@@ -277,7 +298,7 @@ def evaluate(args: argparse.Namespace) -> dict:
 
     # ── Log to MLflow ─────────────────────────────────────────
     mlflow.set_tracking_uri(args.mlflow_uri)
-    mlflow.set_experiment("radiologyai_xray_classification")
+    mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
 
     with mlflow.start_run(run_name="evaluation"):
         mlflow.log_metrics({
@@ -300,12 +321,12 @@ def evaluate(args: argparse.Namespace) -> dict:
     # ── Check acceptance criteria ─────────────────────────────
     logger.info("\nAcceptance Criteria Check:")
     checks = {
-        "Accuracy > 0.92"  : accuracy   > 0.92,
-        "Macro F1 > 0.92"  : macro_f1   > 0.92,
-        "Macro AUC > 0.95" : macro_auc  > 0.95,
-        "Normal recall > 0.90"   : per_class_metrics["Normal"]["recall"]    > 0.90,
-        "Pneumonia recall > 0.90": per_class_metrics["Pneumonia"]["recall"] > 0.90,
-        "COVID19 recall > 0.90"  : per_class_metrics["COVID19"]["recall"]   > 0.90,
+        f"Accuracy > {ACCURACY_MIN:.2f}"   : accuracy   > ACCURACY_MIN,
+        f"Macro F1 > {MACRO_F1_MIN:.2f}"   : macro_f1   > MACRO_F1_MIN,
+        f"Macro AUC > {MACRO_AUC_MIN:.2f}" : macro_auc  > MACRO_AUC_MIN,
+        f"Normal recall > {RECALL_MIN_PER_CLASS:.2f}"   : per_class_metrics["Normal"]["recall"]    > RECALL_MIN_PER_CLASS,
+        f"Pneumonia recall > {RECALL_MIN_PER_CLASS:.2f}": per_class_metrics["Pneumonia"]["recall"] > RECALL_MIN_PER_CLASS,
+        f"COVID19 recall > {RECALL_MIN_PER_CLASS:.2f}"  : per_class_metrics["COVID19"]["recall"]   > RECALL_MIN_PER_CLASS,
     }
     all_passed = True
     for criterion, passed in checks.items():
@@ -323,12 +344,12 @@ def parse_args():
     parser.add_argument(
         "--model_path",
         type    = str,
-        default = str(ROOT / "ml" / "models" / "efficientnetb0_best.pth"),
+        default = str(resolve_path(get_config_value("paths", "model_path", default="ml/models/efficientnetb0_best.pth"))),
     )
     parser.add_argument(
         "--mlflow_uri",
         type    = str,
-        default = "http://localhost:5000",
+        default = get_config_value("ops", "mlflow", "service_url", default="http://localhost:5000"),
     )
     return parser.parse_args()
 

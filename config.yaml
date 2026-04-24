@@ -1,0 +1,106 @@
+app:
+  name: RadiologyAI
+  title: RadiologyAI API
+  description: Chest X-Ray Disease Classifier
+  version: 1.0.0
+  debug: true
+
+paths:
+  processed_data_dir: data/processed
+  models_dir: ml/models
+  experiments_dir: ml/experiments
+  model_path: ml/models/efficientnetb0_best.pth
+  torchscript_model_path: ml/models/efficientnetb0_torchscript.pt
+  export_manifest_path: ml/models/export_manifest.json
+  feedback_file: data/feedback.json
+
+backend:
+  host: 0.0.0.0
+  port: 8005
+  api_prefix: /api/v1
+  allowed_origins:
+    - http://localhost:3000
+    - http://localhost:5173
+  upload:
+    allowed_types:
+      - image/jpeg
+      - image/png
+      - image/jpg
+    max_size_mb: 10
+  feedback:
+    accuracy_threshold: 0.8
+    min_feedback_samples: 10
+
+frontend:
+  port: 3000
+  api_url: http://localhost:8005
+  grafana_url: http://localhost:3001
+  mlflow_url: http://localhost:5005
+
+ml:
+  class_names:
+    - Normal
+    - Pneumonia
+    - COVID19
+  risk_map:
+    Normal: Low
+    Pneumonia: High
+    COVID19: High
+  image_size: 224
+  normalization:
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]
+  model:
+    architecture: EfficientNetB0
+    framework: PyTorch 2.3.0
+    registered_model_name: radiologyai_xray_classifier
+  train:
+    batch_size: 32
+    num_workers: 4
+    pin_memory: true
+    epochs_phase1: 5
+    epochs_phase2: 15
+    lr_phase1: 0.001
+    lr_phase2: 0.0001
+    dropout: 0.3
+    weight_decay: 0.0001
+    grad_clip_norm: 1.0
+    augmentation: flip+brightness+rotation+noise
+    dataset_name: chest-xray + covid19-radiography
+  evaluation:
+    batch_size: 32
+    acceptance:
+      accuracy_min: 0.92
+      macro_f1_min: 0.92
+      macro_auc_min: 0.95
+      recall_min_per_class: 0.9
+  explainability:
+    generate_gradcam: true
+
+ops:
+  mlflow:
+    host: 0.0.0.0
+    port: 5005
+    tracking_uri: sqlite:///mlflow.db
+    service_url: http://localhost:5005
+    artifact_root: ./mlruns
+    experiment_name: radiologyai_xray_classification
+  prometheus:
+    port: 9090
+  grafana:
+    port: 3001
+    admin_user: admin
+    admin_password: admin123
+  airflow:
+    port: 8080
+    base_dir: /opt/radiologyai
+    schedule_interval: "@daily"
+    start_date: 2025-01-01
+    retries: 1
+    retry_delay_minutes: 5
+    feedback_stats_url: http://host.docker.internal:8005/api/v1/feedback/stats
+    mlflow_service_url: http://host.docker.internal:5005
+  alertmanager:
+    port: 9093
+  node_exporter:
+    port: 9100

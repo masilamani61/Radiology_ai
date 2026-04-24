@@ -10,15 +10,15 @@ stages:
     deps:
       - ml/src/data/download.py
     outs:
-      - data/raw/chest-xray-pneumonia/
-      - data/raw/covid19-radiography/
+      - data/raw/chest_xray/
+      - data/raw/COVID-19_Radiography_Dataset/
 
   validate:
     cmd: python ml/src/data/validate.py
     deps:
       - ml/src/data/validate.py
-      - data/raw/chest-xray-pneumonia/
-      - data/raw/covid19-radiography/
+      - data/raw/chest_xray/
+      - data/raw/COVID-19_Radiography_Dataset/
     outs:
       - data/processed/validation_report.json
       - data/processed/baseline_stats.json
@@ -27,8 +27,8 @@ stages:
     cmd: python ml/src/data/preprocess.py
     deps:
       - ml/src/data/preprocess.py
-      - data/raw/chest-xray-pneumonia/
-      - data/raw/covid19-radiography/
+      - data/raw/chest_xray/
+      - data/raw/COVID-19_Radiography_Dataset/
       - data/processed/validation_report.json
     outs:
       - data/processed/train/
@@ -37,13 +37,7 @@ stages:
       - data/processed/split_stats.json
 
   train:
-    cmd: >
-      python ml/src/models/train.py
-        --batch_size 32
-        --epochs_phase1 5
-        --epochs_phase2 15
-        --lr_phase1 0.001
-        --lr_phase2 0.0001
+    cmd: python ml/src/models/train.py
     deps:
       - ml/src/models/train.py
       - ml/src/models/model.py

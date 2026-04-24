@@ -13,6 +13,7 @@ dependencies:
     - mlflow==2.13.0
     - scikit-learn==1.4.2
     - albumentations==1.4.7
+    - PyYAML==6.0.2
     - grad-cam==1.5.0
     - opencv-python==4.9.0.80
     - Pillow==10.3.0
