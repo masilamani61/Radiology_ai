@@ -312,7 +312,7 @@ def train(args: argparse.Namespace) -> None:
 
     # ── MLflow setup ──────────────────────────────────────────
     mlflow.set_tracking_uri(args.mlflow_uri)
-    mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
+    mlflow.set_experiment('radiologyai_xray_classification')
 
     with mlflow.start_run(run_name=f"{MODEL_ARCHITECTURE.lower()}_{commit}") as run:
         run_id = run.info.run_id

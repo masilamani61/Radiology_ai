@@ -76,3 +76,22 @@ stages:
       - ml/models/efficientnetb0_best.pth
     outs:
       - ml/models/efficientnetb0_torchscript.pt
+  drift_detection:
+    cmd: python ml/src/data/drift_detection.py
+    deps:
+      - ml/src/data/drift_detection.py
+      - data/processed/train/
+      - data/processed/test/
+    outs:
+      - data/processed/drift_summary.json
+      - data/processed/drift_report_Normal.html
+      - data/processed/drift_report_Pneumonia.html
+      - data/processed/drift_report_COVID19.html
+
+  data_validation:
+    cmd: python ml/src/data/great_expectations_suite.py
+    deps:
+      - ml/src/data/great_expectations_suite.py
+      - data/processed/train/
+    outs:
+      - data/processed/ge_validation_report.json
