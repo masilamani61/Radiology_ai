@@ -1,4 +1,9 @@
 # RadiologyAI
+### Name : V G Masilamani
+### Roll No : DA25S005
+---
+
+
 
 RadiologyAI is an end-to-end chest X-ray classification and MLOps project. It combines a React frontend, FastAPI backend, PyTorch model pipeline, MLflow experiment tracking, DVC reproducibility, Airflow retraining orchestration, and Prometheus/Grafana monitoring.
 
