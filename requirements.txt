@@ -26,3 +26,4 @@ grad-cam==1.5.0              # pytorch-grad-cam
 
 # ── Kaggle ────────────────────────────────────────────
 kaggle==1.6.14
+reportlab

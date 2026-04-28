@@ -102,11 +102,13 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.airflow
+    
     image: apache/airflow:2.9.1
     container_name: radiologyai_airflow
     command: standalone
     ports:
       - "${AIRFLOW_PORT:-8080}:8080"
+    shm_size: "4gb"
     environment:
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
       - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
@@ -117,6 +119,7 @@ services:
       - ./mlops/airflow/dags:/opt/airflow/dags
       - .:/opt/radiologyai
       - airflow_data:/opt/airflow
+      - /Users/vgmasilamani/Documents:/Users/vgmasilamani/Documents
     restart: unless-stopped
   node_exporter:
     image: prom/node-exporter:latest

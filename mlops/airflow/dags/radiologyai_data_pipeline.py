@@ -173,7 +173,7 @@ skip = EmptyOperator(task_id="skip_retrain", dag=dag)
 evaluate = BashOperator(
     task_id      = "evaluate_model",
     bash_command = (
-        f"{PREFIX} && python ml/src/evaluation/evaluate.py"
+        f"{PREFIX} && python ml/src/evaluation/evaluation.py"
         f" --mlflow_uri {get_config_value('ops', 'airflow', 'mlflow_service_url', default='http://host.docker.internal:5005')}"
     ),
     dag = dag,
@@ -181,7 +181,7 @@ evaluate = BashOperator(
 
 export = BashOperator(
     task_id      = "export_model",
-    bash_command = f"{PREFIX} && python ml/src/models/export.py",
+    bash_command = f"{PREFIX} && python ml/src/models/exports.py",
     dag          = dag,
 )
 

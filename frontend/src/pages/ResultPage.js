@@ -138,18 +138,17 @@ export default function ResultPage({ result, image, onReset }) {
     </div>
   );
 }
-// Add this function inside the ResultPage component (before return):
-// const handleDownloadPDF = async () => {
-//   try {
-//     const res = await axios.post('http://localhost:8005/api/v1/report/pdf',
-//       { ...result, patient_id: 'PT-001', age: '' },
-//       { responseType: 'blob' }
-//     );
-//     const url  = window.URL.createObjectURL(new Blob([res.data]));
-//     const link = document.createElement('a');
-//     link.href  = url;
-//     link.setAttribute('download', 'RadiologyAI_Report.pdf');
-//     document.body.appendChild(link);
-//     link.click();
-//   } catch(e) { toast.error('PDF generation failed'); }
-// };
+const handleDownloadPDF = async () => {
+  try {
+    const res = await axios.post('http://localhost:8005/api/v1/report/pdf',
+      { ...result, patient_id: 'PT-001', age: '' },
+      { responseType: 'blob' }
+    );
+    const url  = window.URL.createObjectURL(new Blob([res.data]));
+    const link = document.createElement('a');
+    link.href  = url;
+    link.setAttribute('download', 'RadiologyAI_Report.pdf');
+    document.body.appendChild(link);
+    link.click();
+  } catch(e) { toast.error('PDF generation failed'); }
+};
